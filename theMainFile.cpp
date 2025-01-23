@@ -5,9 +5,9 @@
 #include <cctype>
 #include <locale>
 #include <cstdlib>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <windows.h>
+#include <io.h> // For _access
+#include <process.h> // For _spawnvp
 
 using namespace std;
 
@@ -63,13 +63,13 @@ string findExecutable(const string &command)
     string path(path_env);
     size_t pos = 0;
 
-    while ((pos = path.find(':')) != string::npos)
+    while ((pos = path.find(';')) != string::npos)
     {
         string dir = path.substr(0, pos);
         path.erase(0, pos + 1);
 
-        string file_path = dir + "/" + command;
-        if (access(file_path.c_str(), R_OK | X_OK) == 0)
+        string file_path = dir + "\\" + command;
+        if (_access(file_path.c_str(), 0) == 0) // Check if the file exists
         {
             return file_path; // Return the first match found
         }
@@ -78,8 +78,8 @@ string findExecutable(const string &command)
     // Check the remaining part of PATH
     if (!path.empty())
     {
-        string file_path = path + "/" + command;
-        if (access(file_path.c_str(), R_OK | X_OK) == 0)
+        string file_path = path + "\\" + command;
+        if (_access(file_path.c_str(), 0) == 0) // Check if the file exists
         {
             return file_path; // Return the first match found
         }
@@ -91,34 +91,19 @@ string findExecutable(const string &command)
 // Execute external commands
 void executeExternal(const vector<string> &args)
 {
-    pid_t pid = fork();
-
-    if (pid == -1)
+    // Convert vector<string> to char* array for _spawnvp
+    vector<char *> c_args;
+    for (const string &arg : args)
     {
-        cerr << "Error: failed to fork process\n";
-        return;
+        c_args.push_back(const_cast<char *>(arg.c_str()));
     }
+    c_args.push_back(nullptr); // Null-terminate the array
 
-    if (pid == 0) // Child process
+    // Spawn a new process to execute the command
+    int result = _spawnvp(_P_WAIT, c_args[0], c_args.data());
+    if (result == -1)
     {
-        // Convert vector<string> to char* array for execvp
-        vector<char *> c_args;
-        for (const string &arg : args)
-        {
-            c_args.push_back(const_cast<char *>(arg.c_str()));
-        }
-        c_args.push_back(nullptr); // Null-terminate the array
-
-        if (execvp(c_args[0], c_args.data()) == -1)
-        {
-            perror("Error");
-            exit(EXIT_FAILURE);
-        }
-    }
-    else // Parent process
-    {
-        int status;
-        waitpid(pid, &status, 0); // Wait for child to finish
+        cerr << "Error: failed to execute command\n";
     }
 }
 
@@ -187,7 +172,7 @@ int main()
             {
                 cout << parameters << " is a shell builtin\n";
             }
-            else if (parameters.find('/') != string::npos && access(parameters.c_str(), R_OK | X_OK) == 0)
+            else if (parameters.find('\\') != string::npos && _access(parameters.c_str(), 0) == 0)
             {
                 cout << parameters << " is " << parameters << "\n";
             }
