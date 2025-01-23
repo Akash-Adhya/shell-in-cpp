@@ -5,35 +5,28 @@
 #include <cctype>
 #include <locale>
 #include <cstdlib>
+#include <limits.h>
+#include <direct.h>
+#include <io.h>
 #include <windows.h>
-#include <io.h> // For _access
-#include <process.h> // For _spawnvp
 
 using namespace std;
 
 // Helper functions to trim strings
-inline void ltrim(string &s)
-{
-    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch)
-                               { return !isspace(ch); }));
+inline void ltrim(string &s) {
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch) { return !isspace(ch); }));
 }
 
-inline void rtrim(string &s)
-{
-    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch)
-                    { return !isspace(ch); })
-                .base(),
-            s.end());
+inline void rtrim(string &s) {
+    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !isspace(ch); }).base(), s.end());
 }
 
 // Partition the command from the input
-string partitionCommand(const string &input)
-{
+string partitionCommand(const string &input) {
     string command = "";
     int i = 0;
 
-    while (i < input.length() && input[i] != ' ')
-    {
+    while (i < input.length() && input[i] != ' ') {
         command += input[i];
         i++;
     }
@@ -42,20 +35,17 @@ string partitionCommand(const string &input)
 }
 
 // Partition parameters from the input
-string partitionParameters(string input, int index)
-{
+string partitionParameters(string input, int index) {
     return input.substr(index);
 }
 
 // Function to check if a command is a built-in
-bool isBuiltin(const string &command, const vector<string> &builtins)
-{
+bool isBuiltin(const string &command, const vector<string> &builtins) {
     return find(builtins.begin(), builtins.end(), command) != builtins.end();
 }
 
 // Search for an executable in the PATH
-string findExecutable(const string &command)
-{
+string findExecutable(const string &command) {
     char *path_env = getenv("PATH");
     if (path_env == nullptr)
         return "";
@@ -63,24 +53,20 @@ string findExecutable(const string &command)
     string path(path_env);
     size_t pos = 0;
 
-    while ((pos = path.find(';')) != string::npos)
-    {
+    while ((pos = path.find(';')) != string::npos) { // Use ';' for Windows PATH delimiter
         string dir = path.substr(0, pos);
         path.erase(0, pos + 1);
 
         string file_path = dir + "\\" + command;
-        if (_access(file_path.c_str(), 0) == 0) // Check if the file exists
-        {
+        if (_access(file_path.c_str(), 4) == 0) { // Check for read and execute permissions
             return file_path; // Return the first match found
         }
     }
 
     // Check the remaining part of PATH
-    if (!path.empty())
-    {
+    if (!path.empty()) {
         string file_path = path + "\\" + command;
-        if (_access(file_path.c_str(), 0) == 0) // Check if the file exists
-        {
+        if (_access(file_path.c_str(), 4) == 0) {
             return file_path; // Return the first match found
         }
     }
@@ -89,43 +75,56 @@ string findExecutable(const string &command)
 }
 
 // Execute external commands
-void executeExternal(const vector<string> &args)
-{
-    // Convert vector<string> to char* array for _spawnvp
-    vector<char *> c_args;
-    for (const string &arg : args)
-    {
-        c_args.push_back(const_cast<char *>(arg.c_str()));
+void executeExternal(const vector<string> &args) {
+    string commandLine;
+    for (const string &arg : args) {
+        commandLine += arg + " ";
     }
-    c_args.push_back(nullptr); // Null-terminate the array
 
-    // Spawn a new process to execute the command
-    int result = _spawnvp(_P_WAIT, c_args[0], c_args.data());
-    if (result == -1)
-    {
+    // Set up process startup information
+    STARTUPINFO si = {sizeof(STARTUPINFO)};
+    PROCESS_INFORMATION pi;
+
+    // Create the process
+    if (!CreateProcess(nullptr, const_cast<char *>(commandLine.c_str()), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         cerr << "Error: failed to execute command\n";
+        return;
+    }
+
+    // Wait for the process to finish
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Close process handles
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+}
+
+// Finding Present working directory
+void pwd() {
+    char pwd[PATH_MAX];
+    if (_getcwd(pwd, sizeof(pwd)) != NULL) {
+        cout << pwd << endl;
+    } else {
+        perror("_getcwd() error");
     }
 }
 
-int main()
-{
+int main() {
     // List of built-in commands
-    vector<string> builtins = {"type", "echo", "exit"};
+    vector<string> builtins = {"type", "echo", "exit", "pwd"};
 
     // Flush after every std::cout / std::cerr
     cout << unitbuf;
     cerr << unitbuf;
 
-    while (true)
-    {
+    while (true) {
         cout << "$ ";
 
         string input;
         getline(cin, input);
 
         // Exiting the shell
-        if (input == "exit 0")
-        {
+        if (input == "exit 0") {
             exit(0);
         }
 
@@ -143,65 +142,59 @@ int main()
         args.push_back(command);
         size_t pos = 0;
         string temp = parameters;
-        while ((pos = temp.find(' ')) != string::npos)
-        {
+        while ((pos = temp.find(' ')) != string::npos) {
             args.push_back(temp.substr(0, pos));
             temp.erase(0, pos + 1);
         }
-        if (!temp.empty())
-        {
+        if (!temp.empty()) {
             args.push_back(temp);
         }
 
         // Handle the `echo` command
-        if (command == "echo")
-        {
+        if (command == "echo") {
             cout << parameters << endl;
         }
 
-        // Handle the `type` command
-        else if (command == "type")
-        {
+        // Handle the `pwd` command
+        else if (command == "pwd") {
             if (parameters.empty())
-            {
+                pwd();
+            else {
+                cerr << "pwd : No parameters required." << endl;
+            }
+        }
+
+        // Handle the `type` command
+        else if (command == "type") {
+            if (parameters.empty()) {
                 cerr << "type: missing argument\n";
                 continue;
             }
 
-            if (isBuiltin(parameters, builtins))
-            {
+            if (isBuiltin(parameters, builtins)) {
                 cout << parameters << " is a shell builtin\n";
-            }
-            else if (parameters.find('\\') != string::npos && _access(parameters.c_str(), 0) == 0)
-            {
+            } else if (parameters.find('\\') != string::npos && _access(parameters.c_str(), 4) == 0) {
                 cout << parameters << " is " << parameters << "\n";
-            }
-            else
-            {
+            } else {
                 string execPath = findExecutable(parameters);
-                if (!execPath.empty())
-                {
+                if (!execPath.empty()) {
                     cout << parameters << " is " << execPath << "\n";
-                }
-                else
-                {
+                } else {
                     cerr << parameters << ": not found\n";
                 }
             }
         }
 
         // Handle unknown or external commands
-        else
-        {
+        else {
             string execPath = findExecutable(command);
-            if (!execPath.empty())
-            {
+            if (!execPath.empty()) {
                 executeExternal(args);
-            }
-            else
-            {
+            } else {
                 cerr << command << ": command not found\n";
             }
         }
     }
+
+    return 0;
 }
