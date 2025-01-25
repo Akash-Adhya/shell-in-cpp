@@ -164,6 +164,23 @@ int main() {
             }
         }
 
+        // Handle the `cd` command
+        else if(command == "cd"){
+            const char *targetDir = parameters.c_str();
+            if(parameters == "~"){
+                const char *HOMEPATH = getenv("USERPROFILE");
+                if(HOMEPATH && _chdir(HOMEPATH) == 0){
+                    // Successfully changed to home directory.
+                }
+                else{
+                    cout << command << ": " << parameters << ": Unable to access home directory" << endl;
+                }
+            }
+            else if(_chdir(targetDir) != 0){
+                cout<<command<<": "<<parameters<<" No such file or directory";
+            }
+        }
+
         // Handle the `type` command
         else if (command == "type") {
             if (parameters.empty()) {
