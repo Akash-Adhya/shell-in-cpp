@@ -117,25 +117,33 @@ int main() {
     cout << unitbuf;
     cerr << unitbuf;
 
+    cout<<"Hello there! Welcome to my shell. Use it however you want."<<endl;
+    cout<<"Created with LOVE by Akash ❤"<<endl;
+
     while (true) {
         cout << "$ ";
 
         string input;
         getline(cin, input);
 
-        // Exiting the shell
-        if (input == "exit 0") {
-            exit(0);
-        }
-
+        
         // Capture command and parameters
         string command = partitionCommand(input);
         string parameters = partitionParameters(input, command.length());
 
+        
         ltrim(command);
         rtrim(command);
         ltrim(parameters);
         rtrim(parameters);
+
+        // Exiting the shell
+        if (command == "exit") {
+            if(parameters == "0")
+                exit(0);
+            else   
+                cout<<"Use 'exit 0' to exit."<<endl;
+        }
 
         // Split input into command and arguments
         vector<string> args;
@@ -152,6 +160,14 @@ int main() {
 
         // Handle the `echo` command
         if (command == "echo") {
+            int i = 0;
+            while (i < parameters.length()) {
+                if (parameters[i] == '\'' || parameters[i] == '\"') {
+                    parameters.erase(parameters.begin() + i);
+                    continue;
+                }
+                i++; 
+            }
             cout << parameters << endl;
         }
 
