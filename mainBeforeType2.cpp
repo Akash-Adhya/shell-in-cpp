@@ -10,6 +10,5 @@ int main() {
         std::cerr << "Failed to launch external terminal." << std::endl;
         return 1;
     }
-
     return 0;
 }
