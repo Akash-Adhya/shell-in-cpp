@@ -221,8 +221,10 @@ int main()
         // Exiting the shell
         if (command == "exit")
         {
-            if (parameters == "0")
+            if (parameters == "0"){
                 exit(0);
+                system("exit");
+            }
             else
                 cout << "Use 'exit 0' to exit." << endl;
         }
