@@ -28,25 +28,97 @@ inline void rtrim(string &s)
             s.end());
 }
 
-// Partition the command from the input
-string partitionCommand(const string &input)
+// Function to split the input into tokens
+vector<string> splitInput(const string &input)
 {
-    string command = "";
-    int i = 0;
+    vector<string> args;
+    string arg;
+    bool inQuotes = false;
+    bool inSingleQuotes = false;
+    char quoteChar = '\0';
 
-    while (i < input.length() && input[i] != ' ')
+    for (size_t i = 0; i < input.length(); ++i)
     {
-        command += input[i];
-        i++;
+        char ch = input[i];
+
+        // Handle escape sequences
+        if (ch == '\\')
+        {
+            if (i + 1 < input.length())
+            {
+                char next = input[++i];
+                if ((inQuotes && (next == '"' || next == '\\')) || // Handle escapes in double quotes
+                    !inQuotes) // Handle escapes outside quotes
+                {
+                    arg += next;
+                }
+                else
+                {
+                    // Literal backslash followed by non-escaped character
+                    arg += '\\';
+                    arg += next;
+                }
+            }
+            else
+            {
+                // Lone backslash at the end of the input
+                arg += ch;
+            }
+        }
+        else if (inQuotes)
+        {
+            if (ch == quoteChar)
+            {
+                inQuotes = false;
+            }
+            else
+            {
+                arg += ch;
+            }
+        }
+        else if (inSingleQuotes)
+        {
+            if (ch == '\'')
+            {
+                inSingleQuotes = false;
+            }
+            else
+            {
+                arg += ch;
+            }
+        }
+        else
+        {
+            if (isspace(ch))
+            {
+                if (!arg.empty())
+                {
+                    args.push_back(arg);
+                    arg.clear();
+                }
+            }
+            else if (ch == '"')
+            {
+                inQuotes = true;
+                quoteChar = '"';
+            }
+            else if (ch == '\'')
+            {
+                inSingleQuotes = true;
+            }
+            else
+            {
+                arg += ch;
+            }
+        }
     }
 
-    return command;
-}
+    if (!arg.empty())
+    {
+        args.push_back(arg);
+    }
 
-// Partition parameters from the input
-string partitionParameters(string input, int index)
-{
-    return input.substr(index);
+    return args;
 }
 
 // Function to check if a command is a built-in
@@ -185,22 +257,26 @@ string processQuotedSegments(const string& parameters) {
 
 
 // Echo command
-void echo(const string& parameters) {
-    string processed = processQuotedSegments(parameters);
-    cout << processed << endl; // Print the processed result
+void echo(const vector<string> &args)
+{
+    for (size_t i = 1; i < args.size(); ++i)
+    {
+        if (i > 1)
+            cout << " ";
+        cout << args[i];
+    }
+    cout << endl;
 }
+
 
 int main()
 {
     // List of built-in commands
-    vector<string> builtins = {"type", "echo", "exit", "pwd"};
+    vector<string> builtins = {"type", "echo", "exit", "pwd", "cd"};
 
     // Flush after every std::cout / std::cerr
     cout << unitbuf;
     cerr << unitbuf;
-
-    cout << "Hello there! Welcome to my shell. Use it however you want." << endl;
-    cout << "Created with LOVE by Akash ❤" << endl;
 
     while (true)
     {
@@ -209,112 +285,90 @@ int main()
         string input;
         getline(cin, input);
 
-        // Capture command and parameters
-        string command = partitionCommand(input);
-        string parameters = partitionParameters(input, command.length());
-
-        ltrim(command);
-        rtrim(command);
-        ltrim(parameters);
-        rtrim(parameters);
-
         // Exiting the shell
-        if (command == "exit")
+        if (input == "exit 0")
         {
-            if (parameters == "0"){
-                exit(0);
-                system("exit");
-            }
-            else
-                cout << "Use 'exit 0' to exit." << endl;
+            exit(0);
         }
 
-        // Split input into command and arguments
-        vector<string> args;
-        args.push_back(command);
-        size_t pos = 0;
-        string temp = parameters;
-        while ((pos = temp.find(' ')) != string::npos)
-        {
-            args.push_back(temp.substr(0, pos));
-            temp.erase(0, pos + 1);
-        }
-        if (!temp.empty())
-        {
-            args.push_back(temp);
-        }
+        // Parse the input into arguments
+        vector<string> args = splitInput(input);
+        if (args.empty())
+            continue;
+
+        string command = args[0];
 
         // Handle the `echo` command
         if (command == "echo")
         {
-            echo(parameters);
+            echo(args);
         }
 
-        // Handle the cat Command
-        else if(command == "cat"){
-            system(input.c_str());
+        // Handle the `cat` command
+        else if (command == "cat")
+        {
+            executeExternal(args);
         }
 
         // Handle the `pwd` command
         else if (command == "pwd")
         {
-            if (parameters.empty())
+            if (args.size() == 1)
                 pwd();
             else
             {
-                cerr << "pwd : No parameters required." << endl;
+                cerr << "pwd: No parameters required." << endl;
             }
         }
 
         // Handle the `cd` command
         else if (command == "cd")
         {
-            const char *targetDir = parameters.c_str();
-            if (parameters == "~")
+            if (args.size() == 1 || args[1] == "~")
             {
-                const char *HOMEPATH = getenv("USERPROFILE");
-                if (HOMEPATH && _chdir(HOMEPATH) == 0)
+                const char *HOMEPATH = getenv("HOME");
+                if (HOMEPATH && chdir(HOMEPATH) == 0)
                 {
-                    // Successfully changed to home directory.
+                    // Successfully changed to home directory
                 }
                 else
                 {
-                    cout << command << ": " << parameters << ": Unable to access home directory" << endl;
+                    cerr << command << ": Unable to access home directory" << endl;
                 }
             }
-            else if (_chdir(targetDir) != 0)
+            else if (chdir(args[1].c_str()) != 0)
             {
-                cout << command << ": " << parameters << " No such file or directory";
+                cerr << command << ": " << args[1] << ": No such file or directory" << endl;
             }
         }
 
         // Handle the `type` command
         else if (command == "type")
         {
-            if (parameters.empty())
+            if (args.size() == 1)
             {
                 cerr << "type: missing argument\n";
                 continue;
             }
 
-            if (isBuiltin(parameters, builtins))
+            if (isBuiltin(args[1], builtins))
             {
-                cout << parameters << " is a shell builtin\n";
+                cout << args[1] << " is a shell builtin\n";
             }
-            else if (parameters.find('\\') != string::npos && _access(parameters.c_str(), 4) == 0)
+            else if (args[1].find('/') != string::npos && access(args[1].c_str(), R_OK | X_OK) == 0)
             {
-                cout << parameters << " is " << parameters << "\n";
+                cout << args[1] << " is " << args[1] << "\n";
             }
             else
             {
-                string execPath = findExecutable(parameters);
+                string execPath = findExecutable(args[1]);
                 if (!execPath.empty())
                 {
-                    cout << parameters << " is " << execPath << "\n";
+                    cout << args[1] << " is " << execPath << "\n";
                 }
                 else
                 {
-                    cerr << parameters << ": not found\n";
+                    cerr << args[1] << ": not found\n";
                 }
             }
         }
