@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -241,6 +242,47 @@ void pwd()
     }
 }
 
+// Execute `cat` command with multiple file display and line numbering
+void catCommand(const vector<string> &args)
+{
+    bool showLineNumbers = false;
+    int startIndex = 1;
+
+    if (args.size() > 1 && args[1] == "-n")
+    {
+        showLineNumbers = true;
+        startIndex = 2;
+    }
+
+    if (startIndex >= args.size())
+    {
+        cerr << "Error: No file specified!" << endl;
+        return;
+    }
+
+    for (size_t i = startIndex; i < args.size(); i++)
+    {
+        ifstream file(args[i]);
+        if (!file)
+        {
+            cerr << "Error: Cannot open file " << args[i] << endl;
+            continue;
+        }
+
+        string line;
+        int lineNumber = 1;
+        while (getline(file, line))
+        {
+            if (showLineNumbers)
+            {
+                cout << lineNumber++ << ": ";
+            }
+            cout << line << endl;
+        }
+        file.close();
+    }
+}
+
 // Processing the Quotations
 string processQuotedSegments(const string& parameters) {
     string result="";
@@ -347,7 +389,7 @@ int main()
         // Handle the `cat` command
         else if (command == "cat")
         {
-            executeExternal(args);
+            catCommand(args);
         }
 
         // Handle the `ls` command
