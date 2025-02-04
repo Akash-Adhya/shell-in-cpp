@@ -190,6 +190,43 @@ void executeExternal(const vector<string> &args)
     CloseHandle(pi.hThread);
 }
 
+// Printing all the files and directories present in the current directory
+void ls(){
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile("*", &findFileData); // Search for all files in the current directory
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        cerr << "Error: Unable to open directory!" << endl;
+        exit(0);
+    } 
+
+    do {
+        string name = findFileData.cFileName;
+
+        // Skip "." and ".."
+        if (name == "." || name == "..") {
+            continue;
+        }
+
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            cout << name << "\\";
+        } else {
+            cout<< name;
+
+            // Display file size
+            // LARGE_INTEGER fileSize;
+            // fileSize.LowPart = findFileData.nFileSizeLow;
+            // fileSize.HighPart = findFileData.nFileSizeHigh;
+            // cout << " [FILE] Size: " << fileSize.QuadPart << " bytes";
+        }
+
+        cout << "\t";
+    } while (FindNextFile(hFind, &findFileData) != 0);
+
+    FindClose(hFind); // Close the file handle
+    cout<<endl;
+}
+
 // Finding Present working directory
 void pwd()
 {
@@ -272,7 +309,7 @@ void echo(const vector<string> &args)
 int main()
 {
     // List of built-in commands
-    vector<string> builtins = {"type", "echo", "exit", "pwd", "cd"};
+    vector<string> builtins = {"type", "echo", "exit", "pwd", "cd" , "ls"};
 
     // Flush after every std::cout / std::cerr
     cout << unitbuf;
@@ -313,6 +350,11 @@ int main()
             executeExternal(args);
         }
 
+        // Handle the `ls` command
+        else if (command == "ls"){
+            ls();
+        }
+
         // Handle the `pwd` command
         else if (command == "pwd")
         {
@@ -331,9 +373,7 @@ int main()
             {
                 const char *HOMEPATH = getenv("HOME");
                 if (HOMEPATH && chdir(HOMEPATH) == 0)
-                {
-                    // Successfully changed to home directory
-                }
+                { /* Successfully changed to home directory */ }
                 else
                 {
                     cerr << command << ": Unable to access home directory" << endl;
