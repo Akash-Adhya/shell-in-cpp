@@ -1,40 +1,26 @@
-#include<iostream>
-#include<windows.h>
+#include <windows.h>
+#include <iostream>
 
-using namespace std;
+int main() {
+    // Path to the shell executable
+    std::string shellPath = "theMainFile.exe";
 
-int main(){
-    string executableName = "start.exe";
+    // Command to open a new cmd window and run the shell
+    std::string command = "cmd /c start cmd /c \"" + shellPath + "\"";
 
-    // Define the name of the C++ file
-    string cppFilePath = "C:\\Users\\HP\\OneDrive\\Desktop\\something\\shell-in-cpp\\theMainFile.cpp";
+    // Set up process startup info
+    STARTUPINFO si = { sizeof(STARTUPINFO) };
+    PROCESS_INFORMATION pi;
 
-    // Command to compile the given C++ file
-    string compileCommand = "g++ \"" + cppFilePath + "\" -o \"" + executableName + "\"";
-
-    // Compile the C++ file
-    cout << "Compiling the file...\n";
-    if (system(compileCommand.c_str()) != 0) {
-        cerr << "Compilation failed. Please check the file path and syntax.\n";
+    // Create a new process (new terminal window)
+    if (!CreateProcess(nullptr, const_cast<char*>(command.c_str()), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        std::cerr << "Failed to open new terminal.\n";
         return 1;
     }
-    cout << "Compilation successful.\n";
 
-    // Command to open a new cmd window, run the executable, and close the window after execution
-    string runCommand = "start cmd /c \"" + executableName + " & exit\"";
+    // Close process handles
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 
-    // Run the executable in a new cmd window
-    cout << "Running the program in a new command prompt...\n";
-    system(runCommand.c_str());
-
-    // Wait for a short duration to ensure the program completes (optional)
-    Sleep(2000);
-
-    // Cleanup: Delete the temporary executable file
-    string cleanupCommand = "del \"" + executableName + "\"";
-    cout << "Cleaning up temporary files...\n";
-    system(cleanupCommand.c_str());
-
-    cout << "Done.\n";
     return 0;
 }

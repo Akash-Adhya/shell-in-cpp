@@ -288,7 +288,10 @@ int main()
         // Exiting the shell
         if (input == "exit 0")
         {
+            cout<<"\n Exiting...\n";
+            Sleep(1000);
             exit(0);
+            return 0;
         }
 
         // Parse the input into arguments
