@@ -409,7 +409,8 @@ int main()
         {
             if (args.size() == 1 || args[1] == "~")
             {
-                const char *HOMEPATH = getenv("HOME");
+                const char *HOMEPATH = getenv("USERPROFILE");
+                printf("%s\n", HOMEPATH);
                 if (HOMEPATH && chdir(HOMEPATH) == 0)
                 { /* Successfully changed to home directory */ }
                 else
