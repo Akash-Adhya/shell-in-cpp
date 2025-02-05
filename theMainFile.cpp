@@ -338,6 +338,21 @@ int main()
     cout << unitbuf;
     cerr << unitbuf;
 
+    // Here the coloring of the lines is used
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, 6);
+    cout<<"<---------------------- WELCOME TO MY SHELL ---------------------->"<<endl;
+    SetConsoleTextAttribute(hConsole, 2);
+    cout<<"                 Made with ";
+    SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+    cout<<"LOVE && RESILIENCE ";
+    SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+    cout<<"by AKASH.                    ";
+    cout<<endl<<endl<<endl;
+    // SetConsoleTextAttribute(HANDLE, WHITE | BLACK)
+    SetConsoleTextAttribute(hConsole, 15 | 0);
+
+
     while (true)
     {
         cout << "$ ";
