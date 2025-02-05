@@ -36,41 +36,20 @@ vector<string> splitInput(const string &input)
     string arg;
     bool inQuotes = false;
     bool inSingleQuotes = false;
-    char quoteChar = '\0';
 
     for (size_t i = 0; i < input.length(); ++i)
     {
         char ch = input[i];
 
-        // Handle escape sequences
-        if (ch == '\\')
+        if (inQuotes)
         {
-            if (i + 1 < input.length())
-            {
-                char next = input[++i];
-                if ((inQuotes && (next == '"' || next == '\\')) || // Handle escapes in double quotes
-                    !inQuotes) // Handle escapes outside quotes
-                {
-                    arg += next;
-                }
-                else
-                {
-                    // Literal backslash followed by non-escaped character
-                    arg += '\\';
-                    arg += next;
-                }
-            }
-            else
-            {
-                // Lone backslash at the end of the input
-                arg += ch;
-            }
-        }
-        else if (inQuotes)
-        {
-            if (ch == quoteChar)
+            if (ch == '"')
             {
                 inQuotes = false;
+            }
+            else if (ch == '\\' && i + 1 < input.length() && (input[i + 1] == '"' || input[i + 1] == '\\' || input[i + 1] == '$'))
+            {
+                arg += input[++i]; // Handle escape sequences
             }
             else
             {
@@ -101,11 +80,13 @@ vector<string> splitInput(const string &input)
             else if (ch == '"')
             {
                 inQuotes = true;
-                quoteChar = '"';
             }
             else if (ch == '\'')
             {
                 inSingleQuotes = true;
+            }
+            else if(ch == '\\' && i < input.length()-1){
+                arg += input[++i];
             }
             else
             {
