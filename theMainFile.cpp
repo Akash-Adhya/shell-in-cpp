@@ -11,6 +11,7 @@
 #include <direct.h>
 #include <io.h>
 #include <windows.h>
+#include <errno.h>
 
 using namespace std;
 
@@ -265,6 +266,7 @@ void catCommand(const vector<string> &args)
     }
 }
 
+// touch command creates single / multiple files
 void touch(const vector<string> &args){
     bool err = false;
     for(string filename : args){
@@ -281,7 +283,7 @@ void touch(const vector<string> &args){
     }
 }
 
-
+// Del command that deletes single / multiple files
 void del(const vector<string> &args) {
     bool err = false;
     for (const string &filename : args) {
@@ -295,6 +297,63 @@ void del(const vector<string> &args) {
     if (!err) {
         if ((args.size() - 1) > 1) cout << "Files deleted!" << endl;
         else cout << "File deleted!" << endl;
+    }
+}
+
+// Helper function for mkdir command
+int createFolder(const string &folderName) {
+    if (_mkdir(folderName.c_str()) != 0) {
+        if (errno == EEXIST) {
+            cerr << "Error: Folder already exists: " << folderName << endl;
+        } else {
+            cerr << "Error: Unable to create folder: " << folderName << endl;
+        }
+        return 1; //indicating error
+    }
+    return 0; //indicates no error
+}
+
+// `mkdir` command that creates single or multiple folders
+void mkdir(const vector<string> &args){
+    int isErr = false;
+    for(string filename: args){
+        if(filename == "mkdir") continue;
+        isErr = createFolder(filename);
+        if(isErr) break;
+    }
+    if(!isErr){
+        if((args.size()-1) > 1) cout<<"Folders created!"<<endl;
+        else cout<<"Folder created!"<<endl;
+    }
+}
+
+// Helper function to delete a folder
+int deleteFolder(const string &folderName) {
+    if (_rmdir(folderName.c_str()) != 0) {
+         
+        if (errno == ENOENT) {
+            cerr << "Error: Folder does not exist: " << folderName << endl;
+        } else if (errno == EINVAL) {
+            cerr << "Error: Invalid folder name: " << folderName << endl;
+        } else {
+            cerr << "Error: Unable to delete folder (Folder may not be empty): " << folderName << endl;
+        }
+        return 1; // Indicating error
+    }
+    return 0; // No error, do not print anything
+}
+
+// `rmdir` command that deletes single or multiple folders
+void deldir(const vector<string> &args) {
+    int isErr = false;
+    for (const string &folderName : args) {
+        if (folderName == "deldir") continue; // Skip command name if included
+        isErr = deleteFolder(folderName);
+        if (isErr) break;
+    }
+    if (!isErr) {
+        if ((args.size() - 1) > 1) cout << "Folders deleted!" << endl;
+        else cout << "Folder deleted!" << endl;
     }
 }
 
@@ -315,7 +374,7 @@ void echo(const vector<string> &args)
 int main()
 {
     // List of built-in commands
-    vector<string> builtins = {"type", "echo", "exit", "pwd", "cd" , "ls"};
+    vector<string> builtins = {"type", "echo", "exit", "pwd", "cd" , "ls", "cat", "touch", "del", "mkdir", "deldir"};
 
     // Flush after every std::cout / std::cerr
     cout << unitbuf;
@@ -410,6 +469,16 @@ int main()
         // Handle the `touch` command
         else if(command == "touch"){
             touch(args);
+        }
+
+        // Handle the `mkdir` command
+        else if(command == "mkdir"){
+            mkdir(args);
+        }
+
+        // Handle the `deldir` command
+        else if(command == "deldir"){
+            deldir(args);
         }
 
         // Handle the `del` command
