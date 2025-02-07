@@ -261,58 +261,41 @@ void catCommand(const vector<string> &args)
             cout << line << endl;
         }
         file.close();
+        cout << endl;
     }
 }
 
-// Processing the Quotations
-string processQuotedSegments(const string& parameters) {
-    string result="";
-    bool isContainQuote = false;
-    int  n = parameters.length();
-
-    for(char c : parameters){
-        if(c == '\'' || c == '"'){
-            isContainQuote = true; 
-            break;
+void touch(const vector<string> &args){
+    bool err = false;
+    for(string filename : args){
+        if(filename == "touch") continue;
+        ofstream file(filename);    // create the file
+        if(!file){
+            cerr<<"Error creating file: "<<filename<<endl;
+            err = true;
         }
     }
-
-    if(!isContainQuote){
-        stringstream ss(parameters);
-        string word;
-        while (ss >> word)
-        {
-            result += word+" ";
-        }
-        
+    if(!err) {
+        if((args.size()-1) > 1) cout<<"Files created!"<<endl;
+        else cout<<"File created!"<<endl;
     }
-    else{
-        bool isQuoted = false;
-        string temp = "";
-        int i = 0;
-        while(i < n){
-            char c = parameters[i];
+}
 
-             if (c == '\'' || c == '"') {
-                if (isQuoted) {
-                    result += temp;
-                    temp = "";
-                    isQuoted = false;
-                } else {
-                    isQuoted = true;
-                    temp = ""; 
-                }
-            } else if (isQuoted) {
-                temp += c;
-            } else {
-                result += c;
-            }
 
-            i++;
+void del(const vector<string> &args) {
+    bool err = false;
+    for (const string &filename : args) {
+        if (filename == "del") continue; // Skip command name if included
+
+        if (remove(filename.c_str()) != 0) {
+            cerr << "Error deleting file: " << filename << endl;
+            err = true;
         }
     }
-
-    return result;
+    if (!err) {
+        if ((args.size() - 1) > 1) cout << "Files deleted!" << endl;
+        else cout << "File deleted!" << endl;
+    }
 }
 
 
@@ -422,6 +405,16 @@ int main()
             {
                 cerr << command << ": " << args[1] << ": No such file or directory" << endl;
             }
+        }
+
+        // Handle the `touch` command
+        else if(command == "touch"){
+            touch(args);
+        }
+
+        // Handle the `del` command
+        else if(command == "del"){
+            del(args);
         }
 
         // Handle the `type` command
