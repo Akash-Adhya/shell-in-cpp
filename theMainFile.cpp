@@ -424,6 +424,11 @@ int main()
             echo(args);
         }
 
+        // Handle the `clear` command
+        else if(command == "clear"){
+            system("cls");
+        }
+
         // Handle the `cat` command
         else if (command == "cat")
         {
