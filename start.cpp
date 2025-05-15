@@ -3,7 +3,7 @@
 
 int main() {
     // Path to the shell executable
-    std::string shellPath = "theMainFile.exe";
+    std::string shellPath = "shell.exe";
 
     // Command to open a new cmd window and run the shell
     std::string command = "cmd /c start cmd /c \"" + shellPath + "\"";
